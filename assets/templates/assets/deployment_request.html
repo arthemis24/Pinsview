@@ -1,0 +1,50 @@
+{% extends "assets/base.html" %}
+{% load i18n humanize static %}
+
+{% block page_title %}
+    <title>ikwen - {% trans 'Deploy my PinsView' %} </title>
+{% endblock %}
+{% block head_style %}
+    {{ block.super }}
+    <style>
+        label { width: 100%; }
+        form { width: 100%; }
+        #img-illustration {border: solid 1px #dbdbdb; border-radius: 5px; margin-top: 50px; min-height: 350px;}
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row" style="margin-top: 70px">
+            <div class="col-sm-6">
+                <h3 style="text-align: center">{% trans 'Deploy my PinsView' %}</h3>
+                <form style="float: left;clear: both; padding: 0 15px;"  method="post" action="{% url 'locator:deploy' %}">{% csrf_token %}
+                    {% include 'core/snippets/model_admin_form.html' %}
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">{% trans "Submit" %}</button>
+                    </div>
+                </form>
+                <div style="clear: both; float: left; font-size: 25px">
+                    {% for error in errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <div id="img-illustration" class="col-sm-6"></div>
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    {{ block.super }}
+    <script type="text/javascript">
+        (function() {
+            $('.form-row').each(function () {
+                $(this).addClass('form-group')
+            })
+
+            $('.form-row input, .form-row select, .form-row textarea').each(function () {
+                $(this).addClass('form-control')
+            })
+
+        })()
+    </script>
+{% endblock %}

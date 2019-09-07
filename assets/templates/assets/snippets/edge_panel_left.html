@@ -1,0 +1,49 @@
+ {% load i18n humanize staticfiles cache auth_tokens %}
+<div class="edge-panel edge-panel-left-container">
+    <div id="side-nav" class="edge-panel-left edges-panel">
+        <div class="wrapper">
+            <div class="stage">
+                <div class="top-edge-panel" style>
+                    <div class="panel-top" style="">
+                        <div id="brand">
+                            <div class="logo">
+                                <img src="{% static 'pinsview/img/ikwen_pinsview.png' %}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="filters" id="filtered">
+                    <section class="cities">
+                        <div class="header">{% trans "Cities" %}</div>
+                        <div class="details">
+                            <ul>
+                                {% for city in cities %}
+                                <li class="city">
+                                    {% if request.user.is_superuser %}
+                                        <a href="#" class="criterion" data-city="{{ city.id }}"  data-lat='{{ city.latitude }}' data-lng="{{ city.longitude }}">{{ city.name }}</a>
+                                    {% else %}
+                                        <a href="#" class="criterion" data-lat='{{ city.latitude }}' data-lng="{{ city.longitude }}">{{ city.name }}</a>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                    <div class="divider"></div>
+                    </section>
+                    <section class="devices">
+                        <div class="header">{% trans "Categories" %}</div>
+                        <div class="details">
+                            {% for category in categories %}
+                                <label class="checkbox">
+                                    <input data-categoryid="{{ category.id }}" checked type="checkbox" class="criterion devicecategory" value="{{ category.id }}">{{ category.name }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <section id="dist-reload"></section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

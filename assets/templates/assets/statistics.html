@@ -1,0 +1,263 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% block meta %}{% endblock %}
+		<title>Creolink - {% trans "Statistics" %}</title>
+            <link rel='stylesheet' href="{% static 'font-awesome/css/font-awesome.min.css' %}" />
+            <link rel='stylesheet' href="{% static 'pinsview/css/flatly.bootstrap.min.css' %}" />
+{#            <link rel='stylesheet' href="{% static 'css/grids.css' %}" />#}
+{#            <link rel='stylesheet' href="{% static 'css/support.css' %}" />#}
+            <link rel='stylesheet' href="{% static 'pinsview/css/ik-base.css' %}" />
+{#            <link rel='stylesheet' href="{% static 'css/locapharm.css' %}" />#}
+            <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+            <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+            <!--[if lt IE 9]>
+              <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+              <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+            <![endif]-->
+            <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+
+        <link rel="stylesheet" type="text/css" href="{% static 'pinsview/css/maps.css' %}?version=3.1">
+
+
+        <script src="{% static 'pinsview/js/jquery-1.12.4.min.js' %}"></script>
+        <script src="{% static 'pinsview/js/bootstrap-3.1.1.min.js' %}"></script>
+        <script src="{% static 'pinsview/js/ikwen-util.js' %}"></script>
+        <style>
+            body {font-size: 15px;font-family: 'Lato', sans-serif;}
+            .fiber-c {background-color: #fff; border: solid 1px #ccc; border-radius:7px; float: left; padding: 10px; padding-left: 0;; width: 100%;}
+            .fiber-c .img-zone {background-image: url("{% static 'pinsview/img/statss.png' %}"); background-size: 100% auto; background-position: center; background-repeat: no-repeat; float: left; height: 100px; width: 100px}
+            .fiber-c .datas{float: right}
+            .fiber-c span.ind {float: right; font-size: 20px}
+            .fiber-c span.result {float: right; clear: both; font-size: 20px; font-weight: 700;}
+            .fiber-c span.result {float: right; clear: both; font-size: 20px; font-weight: 700;}
+            .fiber-c .datas .details{float: left; clear: both}
+            .fiber-c .datas .details .detail{float: left; clear: both}
+            .fiber-c .datas .details .detail .ind{float: left; font-size: 15px}
+            .fiber-c .datas .details .detail .result{float: left; clear: initial; font-size: 15px; margin-left: 10px}
+            .fiber-list {background: #FFF; margin-top: 25px; padding: 20px 15px}
+            .fiber-list .my-table {margin-top: 25px}
+            section h3 {color: #545454;}
+            div.title {font-size: 35px; text-align: center; padding: 15px}
+
+            .navbar-default{background-color: #FFF;}
+            .navbar-default .navbar-brand {color: #545454}
+            .data-grid {border: 1px solid #e8e6df; clear: both; margin-bottom: 45px; width: 100%}
+            .data-grid thead tr {background: #fff;color: #545454; font-size: 13px; font-weight: bold; height: 45px}
+{#            .data-grid tbody tr:hover {background: #F1F1F1 none; background: -webkit-gradient(linear, left top, left bottom, from(#FFF4D5), to(#F0D09E)); background: -moz-linear-gradient(top, #FFF4D5, #F0D09E); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#FFFFF4D5, endColorstr=#FFF0D09E); background: -ms-linear-gradient(top, #FFF4D5, #F0D09E); background: -o-linear-gradient(top, #FFF4D5, #F0D09E)}#}
+            .data-grid thead td {border-left: 1px solid #e8e6df; text-align: center}
+            .data-grid thead tr:first-child {font-size: 22px; border-bottom: solid 1px #e8e6df; height: 51px;padding: 12px;}
+            .data-grid thead tr:last-child {border-bottom: solid #e8e6df 1px; font-size: 17px;  height: 45px;padding: 5px 0;}
+            .data-grid  tbody tr:nth-child(2n) {background: #f9f8f7}
+            .data-grid  tbody tr:nth-child(2n) td {}
+            .data-grid  tbody td {overflow: hidden; padding: 12px 6px}
+            .data-grid tr td:first-child {color: #2c3e50; font-weight: 700}
+            .data-grid td a.greyed {color: #A9A9A9; cursor: default; font-weight: bold}
+            .data-grid .last-row td {border-bottom: none}
+            .data-grid tbody .selected {background: #FFF4D5}
+            .data-grid .empty-grid {color: #999; text-align: center}
+            .data-grid .numeric {text-align: right}
+
+            .grid-filter td {padding: 0}
+            .grid-filter input[type=text], .grid-filter select {border: none; height: 20px; width: 100%}
+
+        </style>
+    </head>
+    <body>
+        <div id="top-notice-ctnr" style="display: none">
+            <span class="floating-notice has-shade" style="float: none; position: static"> Error goes here </span>
+        </div>
+            <nav id="navbar" class="navbar navbar-default navbar-static-top">
+                <div class="container">
+                    <div class="navbar-header">
+                        <div class="container">
+                            <div class="menu-button">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </div>
+                            <a class="navbar-brand" href="{% url 'network' %}">
+                                <strong>Creolink maps</strong>
+                            </a>
+                            <nav class="visible-xs pull-right">
+
+                                <ul id="nav-xs">
+                                        <li>
+                                            <a href="{% url 'logout' %}" style="float: left">{% trans "Logout" %}</a>
+                                        </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                        <div class="container">
+                              <nav role="navigation" class="nav">
+                                  <ul class="nav-items">
+                                      <li class="nav-item dropdown">
+                                          <a href="#" class="nav-link" style="background-image: url({% static 'pinsview/img/user-icon.png' %});background-size: 100% auto;height: 30px;width: 30px; padding: 5px 14px;"></a>
+                                          <nav class="submenu">
+                                              <ul class="submenu-items">
+                                                  <li class="submenu-item" style="font-weight: 700; font-size: 15px; margin-left: 30px ">{{ request.user }}</li>
+                                                  <li class="submenu-item"><hr class="submenu-seperator" /></li>
+                                                  <li class="submenu-item"><a href="{% url 'network' %}" class="submenu-link" style="font-size: 14px">Maps</a></li>
+                                                  <li class="submenu-item"><a href="{% url 'admin:index' %}" class="submenu-link" target="_blank" style="font-size: 14px">Admin</a></li>
+                                                  <li class="submenu-item"><a href="{% url 'logout' %}" class="submenu-link" style="font-size: 14px">Logout</a></li>
+                                              </ul>
+                                          </nav>
+                                      </li>
+                                </ul>
+                            </nav>
+                        </div>
+                </div>
+            </nav>
+
+        <div class="container">
+            <div class="title">Creolink network statistics</div>
+            <section  class="fiber-list col-sm-12" >
+                <h3>Douala</h3>
+                <div style="float: right; "></div>
+                <div class="my-table">
+                    <table class="data-grid">
+                        <thead>
+                            <tr>
+                                <td colspan="3">Fibers</td>
+                            </tr>
+                            <tr>
+                                <td style=>Type</td>
+                                <td>Count</td>
+                                <td>Distance</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for line in dla_fiber_stats %}
+                            <tr>
+                                <td>{{ line.type.name }}</td>
+                                <td class="numeric">{{ line.fibers_count }}</td>
+                                <td class="numeric">{{ line.distance }} Km</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="my-table">
+                    <table class="data-grid">
+                        <thead>
+                            <tr>
+                                <td colspan="2">Devices</td>
+                            </tr>
+                            <tr>
+                                <td>Category</td>
+                                <td>Count</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dev in dla_device_stats %}
+                                <tr>
+                                    <td>{{ dev.category }}</td>
+                                    <td class="numeric">{{ dev.devices_count }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <section  class="fiber-list col-sm-12" >
+                <h3>Yaoundé</h3>
+                <div style="float: right; "></div>
+                <div class="my-table">
+                    <table class="data-grid">
+                        <thead>
+                            <tr>
+                                <td colspan="3">Fibers</td>
+                            </tr>
+                            <tr>
+                                <td >Type</td>
+                                <td>Count</td>
+                                <td>Distance</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for line in yde_fiber_stats %}
+                            <tr>
+                                <td>{{ line.type.name }}</td>
+                                <td class="numeric">{{ line.fibers_count }}</td>
+                                <td class="numeric">{{ line.distance }} Km</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="my-table">
+                    <table class="data-grid">
+                        <thead>
+                            <tr>
+                                <td colspan="2">Devices</td>
+                            </tr>
+                            <tr>
+                                <td>Category</td>
+                                <td>Count</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dev in yde_device_stats %}
+                                <tr>
+                                    <td>{{ dev.category }}</td>
+                                    <td class="numeric">{{ dev.devices_count }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+
+        <script src="{% static 'pinsview/js/jquery-2.2.3.min.js' %}"></script>
+        <script src="{% static 'pinsview/js/bootstrap.min.js' %}"></script>
+        <script src="{% static 'pinsview/js/ikwen-util.js' %}"></script>
+
+        {% block js %}
+            <script type="application/javascript">
+                [].slice.call(document.querySelectorAll('.dropdown .nav-link')).forEach(function(el){
+                    el.addEventListener('click', onClick, false);
+                });
+
+                function onClick(e){
+                    e.preventDefault();
+                    var el = this.parentNode;
+                    el.classList.contains('show-submenu') ? hideSubMenu(el) : showSubMenu(el);
+                }
+
+                function showSubMenu(el){
+                    el.classList.add('show-submenu');
+                    document.addEventListener('click', function onDocClick(e){
+            {#            e.preventDefault();#}
+                        if(el.contains(e.target)){
+                            return;
+                        }
+                        document.removeEventListener('click', onDocClick);
+                        hideSubMenu(el);
+                    });
+                }
+
+                function hideSubMenu(el){
+                    el.classList.remove('show-submenu');
+                }
+
+
+
+            </script>
+
+            <script>
+                (function() {
+                })()
+            </script>
+        {% endblock %}
+    </body>
+</html>

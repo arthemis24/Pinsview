@@ -1,0 +1,108 @@
+{% extends "core/base_bs.html" %}
+{% load i18n humanize static auth_tokens  %}
+{% block head_style %}
+    {{ block.super }}
+{#        <link rel='stylesheet' href="{% static 'tsunami/css/tsunami.css' %}?ver=1.2" />#}
+{#        <link rel='stylesheet' href="{% static 'website/css/website.css' %}?ver=1.3" />#}
+
+    <style>
+        body {background: #F6F6F6; font-family: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif}
+        .modal.fade.show {opacity: 1}
+        .edge-panel-right {background: #fff; height: 100%; top: 0; width: 85%}
+        @media only screen
+        and (max-width : 425px) {
+            .edge-panel-left {background: #fff; height: 100%; top: 0; width: 85%}
+             #bottom-menu {display: none}
+             section.address .cover {height: 750px}
+             .address, section.address a {font-size: 15px; line-height: 22px}
+        }
+    @media (min-width: 992px){
+        .edge-panel-left {display: none; margin-left: -80%;}
+    }
+
+    </style>
+
+{% endblock %}
+
+
+{% block content %}
+    {% block site_menu_xs %}
+        <nav class="visible-xs pull-right">
+            <ul id="nav-xs" class="nav navbar-nav navbar-right">
+                <li class="show-search">
+                    <a href="#">
+                        <i class="glyphicon glyphicon-search"></i>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'ikwen:sign_in' %}" style="float: left"><i class="glyphicon glyphicon-user"></i></a>
+                </li>
+            </ul>
+        </nav>
+    {% endblock %}
+    {% block site_menu %}
+        <div id="site-menu" class="collapse navbar-collapse hidden-sm-up">
+            <div class="container-fluid">
+                <ul class="nav navbar-nav navbar-right main-nav" style="margin: 0 -15px 0 0">
+                    <li class="kakocase visible-md visible-lg"><a href="{% url 'ikwen:company_profile' 'kakocase' %}"> Kakocase</a></li>
+                    <li class="tsunami visible-md visible-lg"><a href="{% url 'tsunami:bundles' %}"> Tsunami</a></li>
+                    <li id="ik-apps" class="visible-sm dropdown">
+                        <a data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="glyphicon glyphicon-th-list" style="color: #233682"></i>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="ik-apps">
+                            <li class="kakocase"><a href="{% url 'ikwen:company_profile' 'kakocase' %}"> Kakocase</a></li>
+                            <li class="tsunami"><a href="{% url 'tsunami:bundles' %}"> Tsunami</a></li>
+                        </ul>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li id="user-home">
+                            <a href="{{ settings.IKWEN_CONSOLE_URL }}">
+                                {% trans "Home" %}
+                                {% if user.get_notice_count > 0 %}
+                                    <span class="label label-danger" style="margin-top: -18px">{{ user.get_notice_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        {% if collaborates_on|length == 1 %}
+                            <li id="user-apps">
+                                <a href="{{ collaborates_on.0.admin_url }}">{{ collaborates_on.0.project_name }}</a>
+                            </li>
+                        {% elif collaborates_on|length > 1 %}
+                            <li id="user-apps" class="dropdown">
+                                <a href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Apps</a>
+                                <ul class="dropdown-menu" aria-labelledby="apps">
+                                    {% for app in collaborates_on %}
+                                        <li><a href="{{ app.admin_url }}">{{ app.project_name }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        {% endif %}
+                        <li id="user-menu" class="dropdown">
+                            <a data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="glyphicon glyphicon-user"></i>
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="user-menu">
+                                <li style="padding: 3px 20px"> {{ user.get_short_name }} </li>
+                                <li role="separator" class="divider"></li>
+                                <li>
+                                    <a href="{{ account_setup_url|ikwenize }}">{% trans "Account setup" %}</a>
+                                </li>
+                                <li><a href="{% url "ikwen:logout" %}">{% trans "Logout" %}</a> </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="hidden-xs" style="height: 65px;">
+                            <a href="{% url 'ikwen:sign_in' %}" style="padding-top: 13px;">
+                                <button class="btn btn-sm" style="background: #233682;color: #FFF;font-weight: 600; width: 100px;">{% trans "Login" %}</button>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    {% endblock %}
+    {% block page_content %}
+    {% endblock %}
+    {% include 'asset/snippets/edge_panel_left.html' %}
+{% endblock %}

@@ -1,0 +1,30 @@
+ {% load i18n humanize staticfiles cache auth_tokens %}
+<div id="asset-details" class="edge-panel edge-panel-right always-docked">
+    <div class="wrapper" style="padding: 0 10px">
+        <div class="stage">
+            <div class="top-edge-panel" style>
+                <div class="panel-top" style="">
+                    <div id="brand">
+                        <div class="logo">
+                            <span id="asset-name"></span>
+                            <p class="text-muted" style="">{% trans "History" %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="filters" id="filtered">
+                <div>
+                    <button class="btn add-event btn-primary btn-sm" style="font-weight: 700; width: 100%">{% trans "Add event" %}</button>
+                </div>
+                <div class="event-list" style="margin-top: 25px;">
+                    <ul class="asset-event-list">
+                        <li class="event tpl">
+                            <span class="type" style="font-weight: 600">features</span>
+                            <span class="amount">5000</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

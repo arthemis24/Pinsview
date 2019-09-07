@@ -1,0 +1,284 @@
+{% extends "core/base_admin.html" %}
+{% load i18n humanize static %}
+{% block head_style %}
+    {{ block.super }}
+    <link rel='stylesheet' href="{% static 'ikwen/css/momo.css' %}" />
+    <link rel='stylesheet' href="{% static 'ikwen/swiper/css/swiper.min.css' %}" />
+    <link href="{% static 'ikwen/css/rewarding.css' %}" media="screen" rel="stylesheet" type="text/css" />
+    <style>
+        label { width: 100%; }
+
+        #navbar, .navbar-default .navbar-nav>.open>a, .navbar-default .navbar-nav>.open>a:hover, .navbar-default .navbar-nav>.open>a:focus {background: #fff}
+        #navbar form.search input, #navbar-search, #user-home, #user-apps, #nav-xs {display: none}
+        .navbar-default .navbar-brand, #user-menu .glyphicon-user  {color: #888}
+        #content > div {margin: auto}
+        div#checkout {background: rgba(255, 255, 255, .9); border-radius: 3px; clear: both; padding: 10px 20px 30px; width: 300px}
+
+        div#checkout input {border: 1px solid #bbb;}
+        div#checkout form {padding: 30px}
+        label span {font-weight: normal}
+        #content form .hint {color: #8D96C5; font-size: 14px}
+        #content form ul.errorlist {padding-left: 0}
+        #content form ul.errorlist li {color: #FF0808; list-style-type: none}
+        .momo-warning {background: #f5f5f5; border: 1px solid #8D96C5;border-radius: 3px;color: #4461d6;font-size: 11px;
+            margin-left: -10%;text-align: center;padding: 6px 10px;width: 120%}
+        .cancel-payment {border: 1px solid; padding: 5px 15px}
+        #cards {border: solid 1px #EEE; min-height: 100px}
+        .field-rewards {display: none}
+        @media (max-width: 767px) {
+            #navbar .navbar-header {float: none; text-align: center}
+        }
+
+        @media (min-width: 768px) {
+            div#checkout {width: 380px}
+        }
+
+        @media (min-width: 992px) {
+            #content {padding-top: 3%}
+        }
+
+    </style>
+{% endblock %}
+
+{% block head_js %}
+    {{ block.super }}
+    <script src="{% static 'ikwen/ajaxuploader/js/fileuploader.js' %}"></script>
+    <script src="{% static 'ikwen/swiper/js/swiper.jquery.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+    <div id="content" class="container">
+        <div class="visible-xs" style="float: left; width: 100%; padding: 15px 0"></div>
+        <div id="checkout">
+            <div style="margin-bottom: 45px">
+                <span class="pull-left" style="width: 50%">
+                    <img src="{{ settings.IKWEN_MEDIA_URL }}{{ payment_mean.logo.name }}" alt="{{ payment_mean.name }}" class="img-responsive" style="height: 45px" />
+                </span>
+                <span class="pull-right" style="color: #03A9F4">
+                    <i class="glyphicon glyphicon-shopping-cart" style="color: #3F51B5; font-size: 21px; margin-right: 5px"></i>
+                    {{ config.currency_symbol }} <strong>{{ amount|floatformat:"0"|intcomma }}</strong>
+                </span>
+                <div class="clearfix"></div>
+            </div>
+            <h3 style="text-align: center"> {% trans "Pay with" %} direct Cash-In </h3>
+            <p class="text-muted" style="text-align: center"> {% trans "Fill the fields with the correct information and submit" %} </p>
+{#            <p class="momo-warning">#}
+{#                {% blocktrans %}#}
+{##}
+{#                {% endblocktrans %}#}
+{#            </p>#}
+            <form onsubmit="return false">{% csrf_token %}
+                <input id="used-coupon" maxlength="240" name="used-coupon" type="hidden" class="form-control input-sm">
+                <div class="form-row field-name form-group">
+                    <label class="required" for="id_name">{% trans "Username, Email or Phone" %}:</label>
+                    <input type="hidden" id="customer-id" name="customer_id"/>
+                    <input id="id_name" maxlength="240" name="username" autocomplete="off" type="text" class="form-control input-sm">
+                    <div id="navbars-results" style="display: none ; position: absolute" class="subtle-shade" data-min-search-chars="2">
+                        <div class="stage">
+                            {% include 'core/snippets/spinner.html' %}
+                            <ul style="float: left; padding-left: 0; width: 100%">
+                                <li class="ik-li tpl" style="display: none">
+{#                                    <a class="target_url" href="#" style="display: block">#}
+                                        <span class="image rounded photo logo bg-img" style="background-image: url({% static 'ikwen/img/no_photo.png' %})"></span>
+                                        <div class="info">
+                                            <div class='full_name project_name has-faded-edge'>Wilend Futch</div>
+                                            <p class="about short_description minor-tag">677714471/ rmwedd@gmail.com</p>
+                                        </div>
+                                        <div class="clearfix"></div>
+{#                                    </a>#}
+                                </li>
+                            </ul>
+                            <div class="clearfix"></div>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                </div>
+
+                <div class="form-row field-name form-group">
+                    <label class="required" for="id_name">{% trans "Amount" %}:</label>
+                    <input id="amount" maxlength="240" autocomplete="off" name="amount" type="number" class="form-control input-sm">
+                </div>
+
+
+                <div class="form-row field-rewards form-group">
+                    <label class="required" for="id_name">{% trans "Use reward cards" %}:</label>
+                    <input id="reward" name="reward" type="hidden" class="form-control input-sm">
+                    <div id="cards">
+
+                                <div class="coupon-group swiper-container">
+{#                                    <h5 class="title">{% trans "Discount" %}</h5>#}
+                                    <ul class="coupon-list swiper-wrapper">
+{#                                        {% for coupon in dc_coupon_list %}#}
+                                        <li class="swiper-slide coupon {{ coupon.status }}" id="{{ coupon.id }}" data-id="{{ coupon.id }}" data-model-name="rewarding.Coupon">
+                                            <a href="">
+                                                <img src="{{ settings.IKWEN_MEDIA_URL }}{{ coupon.image.name }}" />
+                                            </a>
+                                            <p class="coupon-name">
+                                                <i class="fa fa-circle attention text-warning" title="{% trans "Pending for approval" %}"></i>
+                                                <i class="fa fa-circle attention text-danger" title="{% trans "Rejected" %}"></i>
+                                                <a href="">
+                                                    {{ coupon.name }}
+                                                </a>
+                                            </p>
+                                            <div class="actions">
+                                                <i class="action glyphicon glyphicon-trash trash" title="{% trans "Delete Coupon" %}"></i>
+                                            </div>
+                                        </li>
+{#                                        {% endfor %}#}
+                                    </ul>
+{#                                    <div class="swiper-button-next has-shade">#}
+{#                                        <i class="fa fa-angle-right"></i>#}
+{#                                    </div>#}
+{#                                    <div class="swiper-button-prev has-shade">#}
+{#                                        <i class="fa fa-angle-left"></i>#}
+{#                                    </div>#}
+                                    <div class="clearfix"></div>
+                                </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="lauch-payment" class="btn btn-block btn-primary btn-sm">{% trans "Submit" %}</button>
+                </div>
+            </form>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+
+
+
+
+
+
+        <div class="modal fade" id="use-coupon-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">{% trans "Coupon usage" %}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>{% trans "Do you confirm the usage of your discount coupon" %} ?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "No" %}</button>
+                        <button type="button" class="btn btn-primary confirm">{% trans "Confirm" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirm-payment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">{% trans "Payment confirmation" %}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>{% trans "Do you confirm the payement" %} ?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "No" %}</button>
+                        <button type="button" class="btn btn-primary">{% trans "Confirm" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="modal fade" id="incomplete-data" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">{% trans "Incomplete or invalid values" %}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                     <p>{% trans "The value you entered is not a number;" %}</p>
+                     <p>{% trans "Enter a number please" %}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">{% trans "Ok" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    {{ block.super }}
+    <script type="text/javascript">
+        (function() {
+            var couponSwiper = new Swiper('.swiper-container', {
+                slidesPerView: 'auto',
+                spaceBetween: 15,
+                nextButton: '.swiper-button-next',
+                prevButton: '.swiper-button-prev',
+                breakpoints: {
+                    767: {
+                        spaceBetween: 0
+                    }
+                }
+            });
+            {# Load community user choice #}
+            {% url 'locator:list_community' as list_community_url %}
+            var searchDescriptor = [{
+                endpoint: '{{ list_community_url }}',
+                resultTplSelector: '#navbars-results .ik-li',
+                jsonp: true
+            }];
+            $(document).on('click', '.ik-li', function() {
+                var customerName = $(this).find('.info .full_name').text(),
+                    customerId = $(this).data('id'),
+                    clickedInfos = $(this).find('.info .about').text()
+                {#var customerId = $(this).data('id'),#}
+                    {#customerName = $(this).find('.full_name').text();#}
+                $('input#id_name').val(customerName)
+                $('#customer-id').val(customerId);
+                $('#customer-name').val(customerName);
+                getCustomerRewwards(customerId)
+            })
+            $('input#id_name').focusout(function() {$('#navbars-results').fadeOut()});
+            ikwen.setupSearch('input#id_name', '#navbars-results', searchDescriptor);
+            $('#navbars-results .ik-li').click(function () {
+                var clickedName = $(this).find('.info .full_name').text(),
+                    clickedInfos = $(this).find('.info .about').text()
+                $('input#id_name').val(clickedName)
+            })
+
+            function checkValues(){
+                var amount = $('input#amount').val()
+                if ((isNaN(parseFloat(amount)) || !isFinite(amount)) || ($('input#id_name').val()==='')) {
+                    $('#incomplete-data').modal('show');
+                }else $('#confirm-payment').modal('show');
+            }
+
+            $('button#lauch-payment').click(function () {
+                checkValues()
+            })
+            $('button.use-coupon').click(function () {
+                $('#use-coupon').modal('show');
+                var couponId = $(this).data('coupon-id')
+                $('#use-coupon-modal').find('button.confirm').data('coupon', couponId)
+                $(this).parents('.coupon').fadeOut().remove()
+            })
+            $('#use-coupon button.confirm').click(function () {
+                var couponId = $(this).data('coupon')
+                $('#use-coupon-modal').modal('hide');
+                $('input#used-coupon').val(couponId);
+            })
+
+            function getCustomerRewwards(customerId){
+                $('.field-rewards').fadeIn().show()
+            }
+        })()
+    </script>
+{% endblock %}

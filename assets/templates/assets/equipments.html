@@ -1,0 +1,211 @@
+{% extends "core/base_bs.html" %}
+{% load i18n humanize auth_tokens static %}
+
+{% block page_title %}
+    <title>ikwen - {% trans 'PinsView' %} </title>
+{% endblock %}
+
+
+{% block head_js %}
+    {{ block.super }}
+    <script async defer type="text/javascript" src="https://maps.google.com/maps/api/js?key=AIzaSyBEGU-6-JeJW9oa5D8WSIsFXK-aN9CwHqI"></script>
+{% endblock %}
+
+{% block content %}
+    <div id="top-notice-ctnr" class="ik-hdn">
+        <span class="floating-notice" style=""></span>
+    </div>
+    <div id="wrapper">
+        <div id="equipement-viewer" class="edge-panel-left-container">
+            <!-- filter -->
+{#                <button class="glyphicon glyphicon-triangle-bottom" data-toggle="collapse" aria-expanded="false" data-target="#filter">dfgdhfd</button>#}
+            <div id="filter" class="subtle-shade">
+                <div class="header top">
+                    <h5>{{ user_profile.operator.name }}</h5>
+                </div>
+                <div class="filters" id="filtered">
+                    <section class="cities">
+                        <div class="header">Cities</div>
+                        <div class="details">
+                            <ul>
+                                {% for city in cities %}
+                                <li class="city">
+                                    {% if request.user.is_superuser %}
+                                        <a href="#" class="criterion" data-city="{{ city.id }}"  data-lat='{{ city.latitude }}' data-lng="{{ city.longitude }}">{{ city.name }}</a>
+                                    {% else %}
+                                        <a href="#" class="criterion" data-lat='{{ city.latitude }}' data-lng="{{ city.longitude }}">{{ city.name }}</a>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </section>
+                    {% if show_operators %}
+                    <section class="Fibers">
+                        <div class="header">Operators</div>
+                        <div class="details" style="margin-left: 5px">
+                            {% for operator in operators %}
+                                <label class="checkbox" style="padding-left: 0">
+                                    <span class="color" style="background: {{ operator.fiber_color }}"></span><span class="op-name">{{ operator.name }}</span>
+{#                                        <input type="checkbox" checked data-operatorId="{{ operator.id }}" class="criterion operator"  value="{{ operator.id }}">{{ operator.name }}#}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+                    <section class="Devices">
+                        <div class="header">Device categories</div>
+                        <div class="details">
+                            {% for category in categories %}
+                                <label class="checkbox">
+                                    <input data-categoryid="{{ category.id }}" checked type="checkbox" class="criterion devicecategory" value="{{ category.id }}">{{ category.name }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    <section id="dist-reload"></section>
+                </div>
+            </div>
+            <div id="tools">
+                <div class="coords subtle-shade">
+                    <div class="lat coord">
+                        <span>Lat:</span>
+                        <span id="latspan">0.0000000</span>
+                    </div>
+                    <div class="lng coord" style="float: left;margin-left: 12px">
+                        <span>Lng:</span>
+                        <span id="lngspan">0.0000000</span>
+                    </div>
+                    <span id='add-coords' style="background-image: url('{% static "pinsview/img/plus-green-icon.png" %}');background-size: 100% auto; cursor: pointer; float: right; height: 16px; margin-top: 4px; width: 16px" title="Add new coordinates"></span>
+                </div>
+
+                <div class="action subtle-shade">
+                    <span id='erase' style="background-image: url('{% static "pinsview/img/erase_black.png" %}')" title="Clear the map"></span>
+                </div>
+                <div class="action subtle-shade">
+                    <span id='measure-line' style="background-image: url('{% static "pinsview/img/minus.png" %}')" title="Measure"></span>
+                </div>
+                <div class="action subtle-shade ik-hdn">
+                    <span id='view-all-equipments' style="background-image: url('{% static "pinsview/img/refresh-grey-512.png" %}')" title="View all Equipment back"></span>
+                </div>
+                <div class="subtle-shade">
+                     <form role="form" class='transform' id="search" style="">
+                         <div class="form-group" style="margin-bottom: 0">
+                             <input type="text" id="keyword" style="border-radius: 3px;border: solid 1px #CCC;font-size: 12px; height: 23px;padding-left: 10px; width: 290px;" placeholder="Search">
+                             <input type="hidden">
+                             <div id="suggestions-for-view" style="display:none; margin-top: 30px">
+                                 <div class="close" style="padding: 5px 12px; margin-left: 270px;"> X </div>
+                                 <section class="techies">
+                                     <header>Techies</header>
+                                     <div class="result">
+                                         <ul class="techie">
+                                             <li class="ik-hdn choosen"><a href="#" data-type="techie" data-key="1"></a></li>
+                                             <li class="line tpl"><a href="#" data-techname="" data-type="techie" data-key="1"></a></li>
+                                         </ul>
+                                     </div>
+                                     <div class="more"></div>
+                                 </section>
+                                 <section class="devices">
+                                     <header>Devices</header>
+
+                                     <div class="result">
+                                         <ul class="device">
+                                             <li class="ik-hdn choosen"><a href="#" data-type="device" data-key=""></a></li>
+                                             <li class="line tpl"><a href="#" data-type="" data-key="1"></a></li>
+                                         </ul>
+                                     </div>
+                                     <div class="more"></div>
+                                 </section>
+                             </div>
+
+                         </div>
+                    </form>
+                </div>
+                <div class="action subtle-shade" id="toggle-search-inp" style="margin-left: -30px">
+                     <span id='search-btn' style="background-image: url('{% static "pinsview/img/search.png" %}')" title="search"></span>
+                </div>
+            </div>
+            <div class="measure subtle-shade ik-hdn" id="current-polyline-length" style="background-color: #fff; color: #2cab2c; padding: 5px; position: fixed; right: 70px; top: 10px;z-index: 10">0.00 Meter</div>
+            <div class="action user subtle-shade" style="position: fixed; right: 20px; top: 10px;z-index: 10">
+                 <span id='show-search' style="background-image: url('{% static "pinsview/img/user-icon.png" %}');" title="search"></span>
+            </div>
+        </div>
+
+
+        <nav role="navigation" class="nav">
+            <ul class="nav-items">
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link" style="height: 31px;margin: 0 4px; padding: 5px 14px;"></a>
+                    <nav class="submenu">
+                        <ul class="submenu-items">
+                            <li class="submenu-item" style="font-weight: 700; font-size: 12px; margin-left: 10px; overflow: hidden; width: 87%;">{{ request.user }}</li>
+                            <li class="submenu-item"><hr class="submenu-seperator" /></li>
+                            <li class="submenu-item"><a href="{% url 'admin:index' %}" class="submenu-link" target="_blank">Admin</a></li>
+                            <li class="submenu-item"><a href="{% url 'ikwen:logout' %}" class="submenu-link">Logout</a></li>
+                        </ul>
+                    </nav>
+                </li>
+            </ul>
+        </nav>
+        <!-- Page Content -->
+        <button id="save-fiber-modification" class="ik-hdn btn validate btn-success btn-sm" style="font-weight: 700; font-size: 12px; position:fixed; top: 12px; right: 62px; z-index: 5">Save my modifications</button>
+
+        <div id="page-content-wrapper" style="cursor: default; padding: 0">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-sm-12">
+                       <div id="map_canvas" style="cursor: default; width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'assets/snippets/ligthboxes.html' %}
+    <div class="loading-progress">
+        <div style="margin: 20% auto; width: 60%">
+            <p style="text-align: center">
+                Loading. Please wait ...
+                <strong class="progress-rate" style="color: #003192">0%</strong>
+            </p>
+        </div>
+    </div>
+{#    <div id='' class="tooltip-html-text tpl">#}
+{#         <div class="spinner"></div>#}
+{#        <h4></h4>#}
+{#        <div class="client">#}
+{#            <div class="code" style="text-align: center"></div>#}
+{#            <div class="client-name"></div>#}
+{#        </div>#}
+{#        <div class="stage">#}
+{#            <div class="slider">#}
+{#                <div class="photo"></div>#}
+{#            </div>#}
+{#        </div>#}
+{#        <div class="desc">#}
+{#            <p>A much detailed description goes here ...</p>#}
+{#        </div>#}
+{#        <div style="clear: both;">#}
+{#            <div>#}
+{#                <span class="admin"><a href="{{ admin_url }}" target="_blank">View in admin</a></span>#}
+{#            </div>#}
+{#             <span class="view-img"><a href="#">View image</a></span>#}
+{#            <span class="created cleared"><b> Created on: </b> <span class="resp"></span></span>#}
+{#            <span class="techie cleared" style="margin-top: 5px"><b> Techie: </b><span class="resp"></span></span>#}
+{#        </div>#}
+{#    </div>#}
+
+    {% include 'assets/snippets/edge_panel_left.html' %}
+    <div class="edge-swipe-overlay"></div>
+{% endblock %}
+
+{% block js %}
+    {{ block.super }}
+    {% include 'assets/snippets/home_page_js.html' %}
+    <script type="text/javascript">
+        (function() {
+
+
+        })()
+    </script>
+{% endblock %}

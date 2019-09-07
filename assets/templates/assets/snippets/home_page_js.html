@@ -1,0 +1,1097 @@
+{% load i18n staticfiles %}
+<script>
+    (function() {
+        var isSuperUser = false, evListener = 'click'
+        {% if request.user.is_superuser %}
+            isSuperUser = true
+        {% endif %}
+        if(screen.width > 992) {
+            evListener = 'mouseover'
+        }
+
+        var myLong, myLat
+        $('form#add-asset').find('.form-row').addClass('form-group')
+        $('form#add-asset').find('input, textarea, select').addClass('form-control')
+        function initCurrentLocationCoords() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            }
+        }
+        function showPosition(position) {
+            var myLat = position.coords.latitude;
+            var myLong =  position.coords.longitude;
+            $("#id_longitude").val(myLong)
+            $("#id_latitude").val(myLat)
+            $("#locator-status").addClass('active-locator')
+            var myPosition = addMarkerToMap(myLat, myLong, '', 10, "{% static 'pinsview/img/logo-pinsview1.png' %}", "", true);
+            myPosition.setAnimation((google.maps.Animation.DROP))
+            $('#save-asset').removeAttr('disabled')
+            $('.geolocation-inactive').hide()
+        }
+        initCurrentLocationCoords()
+
+
+        var markerCount = 0, map, city, zone, operator, deviceStatus, deviceCategory, searchVal ='',
+            lastMarkerId, clickListener, liveDrawing, measuring;
+        var mapsIntervalId = setInterval(function() {
+            try {
+                var centerCoords;
+                infowindow = new google.maps.InfoWindow();
+                clearInterval(mapsIntervalId);
+                if (myLat && myLong) centerCoords = new google.maps.LatLng(myLat, myLong);
+                else centerCoords = new google.maps.LatLng(3.8738898, 11.531794);
+                var options = {
+                    center: centerCoords, zoom: 13,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    mapTypeControl: true,
+                    mapTypeControlOptions: {
+                        position: google.maps.ControlPosition.BOTTOM_RIGHT
+                    },
+                    fullscreenControl: false,
+                    streetViewControl:false
+
+                };
+
+                var map_canvas = document.getElementById('map');
+                map = new google.maps.Map(map_canvas, options);
+                var boundsIntervalId = setInterval(function() {
+                    if (map.getBounds()) {
+                        clearInterval(boundsIntervalId);
+                        console.log("Clearing boundsIntervalId. Starts loading assets");
+                        loadAllEquipments();
+                    }
+                }, 1000);
+
+
+                // Add new device to the map directly
+                var dbClickListener = google.maps.event.addListener(map,'dblclick',function(event) {
+                    var lat = event.latLng.lat() , lng = event.latLng.lng();
+                    addMarkerToMap(lat, lng, '', 10, "{% static 'pinsview/img/grey_pin.png' %}");
+                    document.getElementById('latlongclicked').value = lat + ';' + lng;
+                    $('form#equipment input.latitude').val(lat);
+                    $('form#equiploadAllEquipmentsment input.longitude').val(lng);
+
+                    $("#id_longitude").val(lng)
+                    $("#id_latitude").val(lat)
+                    $('form#equipment input.origin').val('home');
+                    setNewDevice()
+                });
+         // View mouse current position on the map
+{#                google.maps.event.addListener(map,'mousemove',function(event) {#}
+{#                    document.getElementById('latspan').innerHTML = event.latLng.lat();#}
+{#                    document.getElementById('lngspan').innerHTML = event.latLng.lng();#}
+{#                });#}
+                google.maps.event.addListener(map,'zoom_changed',function(event) {
+                    console.log('Zoom: ' + map.getZoom());
+                    deleteDevices();
+                    loadAllEquipments()
+                });
+                google.maps.event.addListener(map,'dragend',function(event) {
+                    deleteDevices();
+                    loadAllEquipments()
+                });
+            } catch (e) {console.log(e.message)}
+        }, 1000000000000);
+
+
+
+        // Here is the application Initialisation zone; We will manage UI viewer; and default configs
+        var current_user = "{{ request.user.username }}",
+        last_user = localStorage.getItem("last_user");
+        if (current_user != last_user) {
+            localStorage.setItem("last_user", current_user);
+            localStorage.removeItem("fiberlines");
+            localStorage.removeItem("devices");
+            localStorage.removeItem("last_log_updated_id");
+        }
+
+
+        ikwen.index = -1;
+        ikwen.deviceListIds = [];
+        ikwen.eventData = [];
+        ikwen.polylines = [];
+        ikwen.eventDataCount = 0;
+        ikwen.markerList = [];
+        ikwen.currentMarkerListOnTheMap = [];
+        ikwen.currentMarkerDataListOnTheMap = [];
+        ikwen.startDragPosition = {};
+        var lastFiberId = "{{ last_fiber_id }}",
+            lastDeviceId = "{{ last_device_id }}";
+
+        // Select if the user just want the equipments viewer interface or the the live drawing one
+        $('span#live-drawing').click(function (e) {
+            $('button#save-fiber-modification').hide();
+            deleteDevices();
+            deleteFiberline();
+            initLiveDrawingUI();
+            liveDrawing = true;
+        });
+         $('span#view-all-equipments').click(function (e) {
+             $('button#save-fiber-modification').hide();
+            $('#current-polyline-length').hide();
+             deleteDevices();
+             deleteFiberline();
+             prepareDefaultUI();
+             loadAllEquipments();
+             checkDataIntegrity();
+             measuring = false;
+        });
+        $('li#back-to-equipment').click(function (e) {
+            $('button#save-fiber-modification').hide();
+            $('#current-polyline-length').hide();
+            deleteDevices();
+            deleteFiberline();
+            loadAllEquipments();
+            checkDataIntegrity();
+            liveDrawing = false;
+            $('div#ld-tools-content').fadeOut("slow", function (e) {
+                $('#equipement-viewer').show().removeClass('ik-hdn')
+            }).hide()
+        });
+        $('button#done').click(function(){
+            activateLineOptimizing()
+        });
+        var latitude, longitude, deviceId, htmlText,iconImg;
+
+
+        $(document).mousemove(function(e){
+{#            console.log("Position X"+e.pageX +" Y"+e.pageY)#}
+            var cornerX = e.pageX, cornerY = e.pageY
+            if (cornerX >= 0 && cornerX <= 870){
+                if (cornerY <= 1){
+                    $('#top-panel').addClass('show-top-panel')
+                    return
+                }
+                if (cornerY > 1 && cornerY <= 72){
+                    $('#top-panel').addClass('show-top-panel')
+                }else $('#top-panel').removeClass('show-top-panel')
+            }else $('#top-panel').removeClass('show-top-panel')
+        });
+
+{#    Home page for fibelines and network equipments viewer. here there are several function #}
+{#    Transform theses two loading part into callable function; cuz they are needed elsewhere #}
+         function notifyLoadFinished() {
+            blocksLoaded++;
+            var rate = Math.round(blocksLoaded / totalBlocks * 100) + '%';
+            $('.progress-rate').text(rate);
+            if (blocksLoaded >= totalBlocks) {
+                $('.loading-progress').hide();
+            }
+        }
+        $(document).mousemove(function(e){
+{#            console.log("Position X"+e.pageX +" Y"+e.pageY)#}
+            var cornerX = e.pageX, cornerY = e.pageY
+            if (cornerX >= 0 && cornerX <= 870){
+                if (cornerY <= 1){
+                    $('#top-panel').addClass('show-top-panel')
+                    return
+                }
+                if (cornerY > 1 && cornerY <= 72){
+                    $('#top-panel').addClass('show-top-panel')
+                }else $('#top-panel').removeClass('show-top-panel')
+            }else $('#top-panel').removeClass('show-top-panel')
+        });
+
+        function loadAllEquipments() {
+{#            if (liveDrawing || measuring) return;#}
+            var i, j, localDevices = localStorage.getItem("devices"),deviceBlocks = {{ device_blocks }}
+
+            if (localDevices && localDevices[0].zoom) {
+                console.log("Consistent device data in LocalStorage with zoom property. No reload");
+
+                if (map.getZoom() >= 13) {
+                    for (i=0; i<localDevices.length; i++) {
+                        var d = localDevices[i];
+                        addMarkerToMap(d.lat, d.lng, d.id, d.zoom, d.icon, map.getBounds());
+                    }
+                }
+                $('.loading-progress').hide();
+
+                try {
+                    lastFiberId = localFibers[0]['fiberline'].id;
+                    var currentId;
+                    lastDeviceId = localDevices[0].id;
+                    for (i=0; i<localDevices.length; i++) {
+                        currentId = localDevices[i].id;
+                        if (currentId > lastDeviceId) lastDeviceId = currentId
+                    }
+                    console.log("Last device ID: " + lastDeviceId);
+                } catch (e) {}
+
+                setInterval(function() {
+                    checkNewAsset();
+                }, 60000);
+                return
+            }
+
+            var blocksLoaded = 0,
+                localDeviceData,
+                totalBlocks = deviceBlocks;
+            $('.progress-rate').text('0 %');
+            for (i=0; i<deviceBlocks; i++) {
+                $.getJSON('{% url 'locator:grab_devices' %}', {start: i * 50}, function(data) {
+                    if (localDeviceData && localDeviceData.length > 0) {
+                        var end = localDeviceData.length - 1;
+                        localDeviceData = localDeviceData.substr(0, end) + ',' + JSON.stringify(data).substring(1);
+                    } else
+                        localDeviceData = JSON.stringify(data);
+                    localStorage.setItem("devices",localDeviceData);
+                    for (j=0; j<data.length; j++) {
+                        var d = data[j];
+                        addMarkerToMap(d.lat, d.lng, d.id, d.zoom, d.icon, map.getBounds());
+                    }
+                   blocksLoaded++;
+                    var rate = Math.round(blocksLoaded / totalBlocks * 100) + '%';
+                    $('.progress-rate').text(rate);
+                    if (blocksLoaded >= totalBlocks) {
+                        $('.loading-progress').hide();
+                    }
+                });
+            }
+{#                        $('.loading-progress').hide();#}
+
+            setInterval(function() {
+                checkNewAsset();
+            }, 60000);
+        }
+
+        $("button#save-device").click(function () {
+            var latitude = $('form#equipment input.latitude').val(),
+            longitude = $('form#equipment input.longitude').val(),
+            client_code = $('form#equipment input.client_code').val(),
+            client_name = $('form#equipment input.client_name').val(),
+            site_code = $('form#equipment input.site_code').val();
+            var desc = $('form#equipment textarea.desc').val();
+            var category = $('form#equipment .category').val();
+            if (latitude == '' || longitude == '' || category == ''){
+                alert('Incomplete data; recheck again please !');
+                $('form#equipment textarea.desc').focus();
+                return false
+            }else {
+                saveEquipment(category, latitude, longitude, client_code, client_name, site_code, desc);
+                closeLightbox();
+                return false
+            }
+        });
+
+
+        $("button#save-asset").click(function () {
+            var latitude = $('form#add-asset input#id_latitude').val(),
+            longitude = $('form#add-asset input#id_longitude').val(),
+            name = $('form#add-asset input#id_name').val(),
+            manager_name = $('form#add-asset input#id_manager_name').val(),
+            city = $('form#add-asset #id_city').val(),
+            phone = $('form#add-asset input#id_phone').val(),
+            description = $('form#add-asset textarea#id_description').val();
+            var category = $('form#add-asset #id_category').val();
+            if (latitude == '' || longitude == '' || category == ''){
+                alert('Incomplete data; recheck again please !');
+                $('form#add-asset textarea#id_description').focus();
+                return false
+            }else {
+                saveAsset(category, latitude, longitude, name, phone, manager_name, city, description);
+                closeLightbox();
+                return false
+            }
+        });
+
+// Load Equipments by techie city
+        $('section.cities li.city a').click(function() {
+            if ($(this).hasClass('active')) return;
+            $('section.cities li.city a').removeClass('active');
+            $(this).addClass('active');
+            var lat = $(this).data('lat'), lng = $(this).data('lng'), city_id=$(this).data('city'),
+                myLatLng = new google.maps.LatLng(lat, lng);
+            map.panTo(myLatLng)
+        });
+
+        $('section label.checkbox input').click(function(e) {
+            deleteFiberline();
+            deleteDevices();
+            var filterParams = getSelectedCriteria();
+            filterEquipments(filterParams);
+            e.stopPropagation()
+        });
+
+        // handle search
+        $('form#search #keyword').keyup(function(){
+            $('#navbar-results.item .spinner').show()
+            $('#navbar-results.item').show()
+            var query = $(this).val();
+            if (query.length < 2) return;
+            var endpoint = "{% url 'locator:search' %}";
+            var params = {format: 'json', query: query};
+            $.getJSON(endpoint, params, function(data) {
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    $('.empty-grid').remove();
+                    var devices = data.devices;
+                    var techies = data.techies;
+                    if (devices.length>0 || techies.length>0){
+                        $('#navbar-results.item').find('.spinner').hide()
+                    }
+                    populateDevices(devices);
+                    populateTechies(techies)
+                }
+            });
+            return false
+        });
+        $(document).on('click', 'div#navbar-results.item div.result ul li', function(event) {
+            var $result = $(this).find('a'),
+                equipmentType = $result.data('type'),
+                pKey = $result.data('key'),
+                name = $result.text(),
+                index = -1;
+
+            if (equipmentType === 'device') {
+                var lat = $result.data('lat'),
+                    lng = $result.data('lng'),
+                    icon = "{{ media_root }}" + $result.data('icon'),
+                    coordinates = new google.maps.LatLng(lat, lng);
+                    if($result.data('zoom')) var zoom = $result.data('zoom');else zoom = 15
+                map.panTo(coordinates);
+                map.setZoom(zoom);
+                deleteDevices();
+                var marker = addMarkerToMap(lat, lng, pKey, zoom, icon, null, true);
+                loadAllEquipments();
+                marker.setAnimation(google.maps.Animation.BOUNCE);
+                setTimeout(function(){marker.setAnimation(null); }, 10000);
+                $('div#navbar-results.item div.close').click()
+            }
+            if (equipmentType ==  'techie') {
+                var username = $(this).find('a').data('techname');
+                $('#techie-name').fadeIn().data('techieid', pKey ).find('span:first-child').text(name);
+                $('#techie-name').removeClass('ik-hdn').fadeIn();
+                getTechieInstallation(pKey)
+            }
+            // lauch my request
+            return false
+        });
+
+        $('#cancel-techie').click(function() {
+            $('#techie-name').fadeOut().data('tachieid', '' ).find('span:first-child').text('')
+        });
+        function applyFiberTemplate($tplRow, fiber) {
+            $tplRow.find('a').attr('data-type', 'fiber');
+            $tplRow.find('a').attr('data-key', fiber.id);
+            $tplRow.find('a').text(fiber.name);
+            return $tplRow
+        }
+
+        function populateDevices(devices) {
+            $('#navbar-results.item ul.devices li').not('.tpl').remove();
+            if (devices.length == 0) {
+                var $emptyRow = $('<div class="empty-grid" colspan="10">No asset found</div>');
+                $emptyRow.insertBefore('ul.devices li.tpl');
+                return
+            }
+            var $list = $('<div></div>');
+            for (var i = 0; i < devices.length; i++) {
+                var $newRow = $('ul.devices li.tpl').clone().removeClass('tpl');
+                $newRow = applyDeviceTemplate($newRow, devices[i]).show();
+                $list.append($newRow)
+            }
+            $list.children().insertBefore('ul.devices li.tpl')
+        }
+        function applyDeviceTemplate($tplRow, device) {
+            $tplRow.find('a').data({type: 'device', key: device.id, zoom: device.zoom,
+                lat: device.latitude, lng: device.longitude, icon: device.category.icon});
+            $tplRow.find('a').attr('data-type', 'device')
+            $tplRow.find('a').attr('data-key', device.id)
+            $tplRow.find('a').attr('data-zoom', device.zoom)
+            $tplRow.find('a').attr('data-lat', device.latitude)
+            $tplRow.find('a').attr('data-lng', device.longitude)
+            $tplRow.find('a').attr('data-icon', device.category.icon)
+            $tplRow.find('.info .full_name').text(device.name);
+            $tplRow.find('p.about').text(device.description);
+            return $tplRow
+        }
+
+        function populateTechies(techies) {
+            $('ul.techies li').not('.tpl').remove();
+            if (techies.length == 0) {
+                var $emptyRow = $('<div class="empty-grid" colspan="10">No data found</div>');
+                $emptyRow.insertBefore('ul.techies li.tpl');
+                return
+            }
+            var $list = $('<div></div>');
+            for (var i = 0; i < techies.length; i++) {
+                var $newRow = $('ul.techies li.tpl').clone().removeClass('tpl');
+                $newRow = applyTechieTemplate($newRow, techies[i]).show();
+                $list.append($newRow)
+            }
+            $list.children().insertBefore('ul.techies li.tpl')
+        }
+
+         $(document).on('click', '.view-img.open-right-panel', function(event) {
+             var pk = $(this).parents('.tooltip-html-text').attr('id'),
+             assetName = $(this).parents('.tooltip-html-text').find('h4').text(),
+             prospectEventList = grabAssetEvent(pk)
+             $("#asset-details").find('.add-event').data("pk", pk)
+             $("#asset-name").text(assetName)
+         }).on('click', '.add-event', function(event) {
+             var assetPk = $(this).data('pk')
+             openEventForm(assetPk)
+         })
+
+        function grabAssetEvent(assetId) {
+            var endpoint = "{% url 'locator:get_asset_event_log' %}";
+            var params = {format: 'json', assetId:assetId};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var eventList = data.event_list;
+                    populateProspectEvent(eventList)
+                    ikwen.swipeInRightPanel()
+                }
+            })
+        }
+
+        function populateProspectEvent(eventList) {
+            $('ul.asset-event-list li.event').not('.tpl').remove();
+            $('ul.asset-event-list li.empty-grid').remove();
+            if (eventList.length == 0) {
+                var $emptyRow = $('<li class="empty-grid">{% trans "No data found for this asset" %}</li>');
+                $emptyRow.insertBefore('ul.asset-event-list li.event.tpl');
+                return
+            }
+            $('li.empty-grid').remove()
+            var $list = $('<div></div>');
+            for (var i = 0; i < eventList.length; i++) {
+                var $newRow = $('ul.asset-event-list li.event.tpl').clone().removeClass('tpl');
+                $newRow = applyEventTemplate($newRow, eventList[i]).show();
+                $list.append($newRow)
+            }
+            $list.children().insertBefore('ul.asset-event-list li.event.tpl')
+        }
+
+        function applyEventTemplate($tplRow, event) {
+            $tplRow.attr('id', event.id)
+            $tplRow.find('.type').text(event.type);
+            $tplRow.find('.amount').text(event.measure);
+            return $tplRow
+        }
+
+        function applyTechieTemplate($tplRow, techie) {
+            var firstName = '';
+            var lastName = '';
+            var finalName = '';
+            if (techie.member.first_name)
+                finalName += techie.member.first_name;
+            if (techie.member.lastName)
+                finalName += techie.member.lastName;
+            $tplRow.find('a').data('type', 'techie');
+            $tplRow.find('a').data('key', techie.id);
+            $tplRow.find('a').data('techname', techie.member.username);
+            if (finalName.length > 0)
+                $tplRow.find('.full_name').text(techie.member.full_name);
+            else
+                $tplRow.find('.full_name').text( techie.member.username);
+
+            $tplRow.find('.about').text(techie.member.email +" / "+ techie.member.phone);
+            return $tplRow
+        }
+        $("span#erase").click(function() {
+            deleteFiberline();
+            deleteDevices();
+            $('.recents-equipments').removeClass('active');
+            $('section#fiber  a').removeClass('active');
+            $('section#device  a').removeClass('active');
+            $('section#city  a').removeClass('active');
+            return false
+        });
+        $('#navbar-results.item .close').click(function() {
+            $(this).parent('#navbar-results.item').hide()
+        });
+
+        $("#add-coords").click(function () {
+            $('#lightbox .dialog.new-coordinate input').val('');
+            $('#lightbox .dialog').not('.new-coordinate').hide();
+            $('#lightbox .dialog.new-coordinate').show();
+            $('#lightbox').fadeIn().show()
+        });
+        $('#lightbox .dialog.new-coordinate button.validate').click(function () {
+            var rawCoords = $('#lightbox .dialog.new-coordinate input').val();
+            if (rawCoords == ''){
+                alert('No coordinates entered');
+                $('#lightbox .dialog.new-coordinate input').focus();
+                return
+            }
+            var coords = rawCoords.split(';');
+            if (coords.length != 2){
+                alert('Respect the format please');
+                $('#lightbox .dialog.new-coordinate input').val('');
+                $('#lightbox .dialog.new-coordinate input').focus();
+                return
+            }
+            var latitude = coords[0];
+            var longitude = coords[1];
+            addMarkerToMap(latitude, longitude, '', 10, "{% static 'pinsview/img/grey_pin.png' %}");
+            var myLatlng = new google.maps.LatLng(latitude, longitude);
+            map.panTo(myLatlng);
+            closeLightbox();
+
+            $('form#equipment input.latitude').val(latitude);
+            $('form#equipment input.longitude').val(longitude);
+            $('form#equipment input.origin').val('home');
+            $("#close").addClass('lastMarkerAdded');
+            setNewDevice()
+        });
+        $('#close').click(function(){
+            closeLightbox();
+            if ($this.hasClass('lastMarkerAdded')) {
+                deleteLastMarker();
+                $("#close").removeClass('lastMarkerAdded')
+            }
+        });
+        $('#lightbox .dialog.new-asset button.cancel').click(function(){
+            deleteLastMarker();
+            closeLightbox()
+        });
+
+        $('button.cancel').click(function(){
+            closeLightbox()
+        });
+
+        $('#add-event-btn').click(function(){
+            initCurrentLocationCoords()
+            setNewDevice()
+        });
+
+
+        var height = $(document).height();
+        $('#page-content-wrapper').css({'height': height, 'marginTop':0});
+        $('#filter').css({'height': height-150});
+
+        $("#toggle-search-inp").click(function() {
+            $('form#search').toggleClass('active')
+        });
+        function grabEventLogDetail(EventId) {
+            var $newEvent = $('div.modal.event-summary.ik-hdn');
+
+            var endpoint = "{% url 'locator:grab_event_log_detail' %}";
+            var params = {format: 'json', EventId:EventId};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var eventDetail = data.event_details;
+                    return applyEventDetailTemplate($newEvent, eventDetail);
+                }
+            })
+        }
+        function grabDeviveInformations(deviceId) {
+            var $newRow = $('div.tooltip-html-text.tpl').clone().removeClass('tpl');
+
+            var endpoint = "{% url 'locator:grab_device_info' %}";
+            var params = {format: 'json', deviceId:deviceId};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var device = data.device;
+                    return applyDeviceTooltipTemplate($newRow, device);
+                }
+            })
+        }
+
+
+        function applyEventDetailTemplate($tplRow, eventDetail) {
+            var description = "<em class='text-muted'> &lt;No description&gt;</em>"
+            $tplRow.attr('id', eventDetail.id);
+            $tplRow.find('.asset span').text(eventDetail.asset_name);
+            if (eventDetail.details !== '') description = eventDetail.details;
+            $tplRow.find('.details span').html(description);
+
+            $tplRow.find('.measure strong').text(eventDetail.event_type_label);
+            $tplRow.find('.measure span').text(eventDetail.measure);
+            $tplRow.find('.created span').text(eventDetail.created_on);
+            $tplRow.find('.techie span').text(eventDetail.techie);
+            return $tplRow
+        }
+
+        function applyDeviceTooltipTemplate($tplRow, device) {
+            var description = "<em class='text-muted'> &lt;No description&gt;</em>",
+            noImg = "no_photo.png"
+            if (device.photo){
+                var strPhotoUrl = device.photo,
+                    f = strPhotoUrl.search(noImg);
+
+                $tplRow.find('.photo').css('background-image', 'url(' + device.photo + ')');
+            }
+            $tplRow.attr('id', device.id);
+            $tplRow.find('h4').text(device.name);
+            if (device.description != '') description = device.description;
+            if (device.name) $tplRow.find('.client-name').html("<b>Manager: </b>"+device.manager+" / "+device.phone)
+
+            $tplRow.find('.desc').html(description);
+
+            $tplRow.find('.admin a').attr('href', device.admin_url);
+            $tplRow.find('.reload a').attr('deviceid', device.id);
+            $tplRow.find('.created span').text(device.created_on);
+            $tplRow.find('.techie span').text(device.techie);
+            return $tplRow
+        }
+
+        function applyFiberTooltipTemplate($tplRow, fiber) {
+            var description = "<em class='text-muted'> &lt;No description&gt;</em>";
+            $tplRow.attr('id', fiber.id);
+            $tplRow.find('.edit-lnk .admin a').hide();
+            if (fiber.techie_username == "{{ request.user.username }}"){
+                $tplRow.find('.edit-lnk .admin a').attr('fiberid', fiber.id).show();
+            }
+            $tplRow.find('.edit-lnk .reload a').attr('fiberid', fiber.id);
+            $tplRow.find('h4').text(fiber.name);
+            if (fiber.description != '') description = fiber.description;
+            $tplRow.find('div.description span').html(description);
+            $tplRow.find('span.admin a').attr('href', fiber.admin_url);
+            $tplRow.find('.created-on span').text(fiber.created_on);
+            $tplRow.find('.distance span').text(fiber.distance);
+            $tplRow.find('.techie span').text(fiber.techie);
+            return $tplRow
+        }
+
+
+        // from Here we manage line Measures
+        $('#measure-line').click(function(e){
+            if ($(this).parent('.action').hasClass('.turn-back')){
+                prepareDefaultUI();
+                measuring = true;
+            }else {
+                prepareUIforLineMeasuring();
+                var lineSymbol = {
+                  path: 'M 0,-1 0,1',
+                  strokeOpacity: 1,
+                  scale: 1
+                };
+                ikwen.polylines = [];
+                ikwen.currentMarkerListOnTheMap = [];
+                ikwen.currentMarkerDataListOnTheMap = [];
+                map.setOptions({draggableCursor: 'default'});
+                var poly = new google.maps.Polyline({
+{#                strokeColor: '#000000',#}
+                    strokeWeight: 1,
+                    strokeOpacity: 0,
+                    icons: [{
+                        icon: lineSymbol,
+                        offset: '0',
+                        repeat: '10px'
+                      }]
+                });
+                poly.setMap(map);
+                ikwen.polylines.push(poly);
+
+            // Add a listener for the click event
+                map.addListener('click', addLatLng);
+            }
+
+        });
+
+        $('form#line-search button').on('click', function() {
+            var lineCoords = getPolylinePath(),
+                line = $('form#line-search  input:hidden').val(),
+                    lineDistance = $('#current-polyline-length').attr('distance');
+
+            if (line == ""){
+                $('#top-notice-ctnr span').html('Choose a line first please');
+                $('#top-notice-ctnr').removeClass('ik-hdn').fadeIn().delay(7000).fadeOut();
+                return false
+            }
+
+            saveLinePath(line, lineCoords, lineDistance, false);
+            $('#top-notice-ctnr span').html('line saved!');
+            $('#top-notice-ctnr').removeClass('ik-hdn').fadeIn().delay(7000).fadeOut();
+        });
+{#        Here are the application's useful functions; they are build for both drawing and equipement management #}
+{#    drawing and equipement management     #}
+
+        $("#save-event").click(function (e) {
+            var asset_id = $('form#event #asset-id').val(),
+            log_event_type_id = $('form#event .log-type').val(),
+            measure = $('form#event .measure').val(),
+            details = $('form#event .details').val()
+            saveAssetEvent(details, log_event_type_id, measure, asset_id)
+            return false
+        })
+
+
+        // set a marker to the map
+        function addMarkerToMap(lat, lng, deviceId, zoom, iconImg, bounds, pan) {
+            if (bounds) {
+                var sw = bounds.getSouthWest(),
+                    ne = bounds.getNorthEast();
+                if (parseFloat(lat) < sw.lat() || parseFloat(lng) < sw.lng()
+                    || parseFloat(lat) > ne.lat() || parseFloat(lng) > ne.lng()) return;
+            }
+            {#d = map#}
+            {#if (map.getZoom() < 13 || zoom > map.getZoom()) return;#}
+            var infowindow = new google.maps.InfoWindow();
+            lastMarkerId = ikwen.currentMarkerListOnTheMap.length;
+            var myLatLng = new google.maps.LatLng(lat, lng);
+            var marker = new google.maps.Marker({
+                id: lastMarkerId - 1,
+                position: myLatLng,
+                map: map,
+                icon: iconImg,
+                deviceId: deviceId,
+                draggable:isSuperUser
+
+            });
+            var markerData = {id: deviceId, lat: lat, lng:lng, icon:iconImg};
+            ikwen.currentMarkerListOnTheMap.push(marker);
+            ikwen.currentMarkerDataListOnTheMap.push(markerData);
+            //Gives each marker an Id for the on click markerCount++;
+            // Creates the event listener for clicking the marker
+            // and places the marker on the map
+            google.maps.event.addListener(marker,"dragstart",function(event){
+                ikwen.startDragPosition =  this.getPosition();
+
+            });
+            google.maps.event.addListener(marker,'dragend',function(event) {
+                var index = ikwen.currentMarkerListOnTheMap.indexOf(marker);
+                ikwen.currentMarkerListOnTheMap.splice(index, 1);
+                ikwen.currentMarkerDataListOnTheMap.splice(index, 1);
+                ikwen.currentMarkerListOnTheMap.push(marker);
+                ikwen.currentMarkerDataListOnTheMap.push(markerData);
+                if (confirm("Do you confirm the new position?")){
+                    changeDevicePosition(deviceId, event.latLng.lat(), event.latLng.lng())
+                }else{
+                    changeDevicePosition(marker)
+                }
+            });
+            google.maps.event.addListener(marker, evListener, (function(marker, markerCount){
+                return function() {
+                    if (marker.deviceId) {
+                        $('.gm-style-iw').parent().hide();
+                        var htmlInfo = grabDeviveInformations(marker.deviceId);
+                        var endpoint = "{% url 'locator:grab_device_info' %}";
+                        var params = {format: 'json', deviceId:deviceId};
+                        $.getJSON(endpoint, params, function(data) {
+                            var device = data.device;
+                            var $newRow = $('div.tooltip-html-text.tpl').clone().removeClass('tpl');
+                            var htmContent = applyDeviceTooltipTemplate($newRow, device);
+                            $newRow.find('.spinner').hide();
+                            var strHtmContent = htmContent.prop('outerHTML');
+                            infowindow.setContent(strHtmContent);
+                        });
+                    }else {htmlInfo="<p>You are here !</p>"}
+
+
+                    infowindow.setContent(htmlInfo);
+                    infowindow.open(map, marker); }
+            }) (marker, markerCount));
+            {#if (pan) map.panTo(myLatLng);#}
+            return marker
+        }
+
+{#        change marker position#}
+        function changeDevicePosition(marker) {
+            var lat = ikwen.startDragPosition.lat();
+            var lng = ikwen.startDragPosition.lng();
+            var latlng = new google.maps.LatLng(lat, lng);
+            marker.setPosition(latlng);
+        }
+        // set markers to invisible or remove every markers from the marker list
+        function deleteDevices() {
+            //Loop through all the markers and remove
+            for (var i = 0; i < ikwen.currentMarkerListOnTheMap.length; i++) {
+                ikwen.currentMarkerListOnTheMap[i].setMap(null);
+            }
+            ikwen.currentMarkerListOnTheMap = [];
+            ikwen.currentMarkerDataListOnTheMap = [];
+        }
+        function deleteFiberline() {
+            for (i=0; i<ikwen.polylines.length; i++) {
+              ikwen.polylines[i].setMap(null); //or line[i].setVisible(false);
+            }
+        }
+        var deleteLastMarker = function() {
+            var index = ikwen.currentMarkerListOnTheMap.length;
+{#            var marker = ikwen.currentMarkerListOnTheMap.length[ - 1];#}
+            ikwen.currentMarkerListOnTheMap[index-1].setMap(null);
+            ikwen.currentMarkerListOnTheMap.pop();
+            ikwen.currentMarkerDataListOnTheMap.pop();
+        };
+
+
+    // Save Equipment using AJAX
+        function saveEquipment(category, latitude, longitude, client_code, client_name, site_code, desc) {
+            var endpoint = "{% url 'locator:save_device' %}";
+            var params = {format: 'json', category: category, description:desc, latitude:latitude, longitude:longitude,
+                client_code:client_code, client_name:client_name, site_code:site_code };
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var device = data.device,
+                    latitude = parseFloat(device.latitude),
+                    longitude = parseFloat(device.longitude),
+                    deviceId = device.id;
+                    if (device.category.icon) {
+                        iconImg =  "{{ media_root }}" + device.category.icon
+                    }
+                    addMarkerToMap(latitude, longitude, deviceId, device.category.zoom, iconImg, null, true);
+                    $('#top-notice-ctnr span').html('Equipement Saved');
+                    $('#top-notice-ctnr').removeClass('ik-hdn').fadeIn().delay(7000).fadeOut();
+                }
+            });
+            return false
+        }
+
+    // Save Equipment using AJAX
+        function saveAsset(category, latitude, longitude, name, phone, manager_name, city, description) {
+            var endpoint = "{% url 'locator:save_asset_position' %}";
+            var params = {format: 'json', category: category, description:description, latitude:latitude, longitude:longitude,
+                name:name, phone:phone, manager_name:manager_name, city:city};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var device = data.device,
+                    latitude = parseFloat(device.latitude),
+                    longitude = parseFloat(device.longitude),
+                    deviceId = device.id;
+                    if (device.category.icon) {
+                        iconImg =  "{{ media_root }}" + device.category.icon
+                    }
+                    addMarkerToMap(latitude, longitude, deviceId, device.category.zoom, iconImg, null, true);
+                    $('#top-notice-ctnr span').html('Asset Saved');
+                    $('#top-notice-ctnr').removeClass('ik-hdn').fadeIn().delay(7000).fadeOut();
+                }
+            });
+            return false
+        }
+
+
+        function saveAssetEvent(details, log_event_type_id, measure, asset_id) {
+            var event_log = []
+            var endpoint = "{% url 'locator:save_event_log' %}";
+            var params = {format: 'json', details: details, log_event_type_id:log_event_type_id, measure:measure, asset_id:asset_id};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    event_log.push(data.event_log)
+                    populateProspectEvent(event_log)
+                    closeLightbox()
+                }
+            });
+            return false
+        }
+
+        function filterEquipments(params) {
+            var endpoint = "{% url 'locator:filter_network_data' %}";
+            var techieId = $('#techie-name').data('techieid');
+            var current_user_lat = "{{ user_profile.city.latitude }}",
+                current_user_lng = "{{ user_profile.city.longitude }}";
+            params.format ='json';
+            params.techieId = techieId;
+
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var devices = data.devices;
+                    for (var i=0; i<=devices.length-1; i++){
+                        var latitude = parseFloat(devices[i].latitude),
+                            longitude = parseFloat(devices[i].longitude),
+                            deviceId = devices[i].id,
+                            zoom = devices[i].category.zoom;
+                        if (devices[i].category.icon) {
+                            iconImg =  "{{ media_root }}" + devices[i].category.icon
+                        }
+                        addMarkerToMap(latitude, longitude, deviceId, zoom, iconImg, null, true);
+                    }
+                }
+            });
+            return false
+        }
+
+
+
+        function changeDevicePosition(deviceId, latitude, longitude){
+            var endpoint = "{% url 'locator:change_device_position' %}";
+            var params = {format: 'json', deviceId:deviceId, latitude: latitude, longitude:longitude};
+            $('body, button').css('caursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var myLatlng = new google.maps.LatLng(latitude, longitude);
+                    var options = {
+                        center: myLatlng, zoom: 22,
+                        mapTypeId: google.maps.MapTypeId.ROADMAP
+                    };
+                    map.panTo(myLatlng);
+                    var localDevices = JSON.parse(localStorage.getItem("devices"));
+                    var changeDevice = data.device;
+                    for (var j = 0; j < localDevices.length; j++) { //loop over the collection
+                        if (localDevices[j].id === changeDevice.id) { //see if ids match
+                            localDevices.splice(j, 1); //remove item from array
+                            break; //exit loop
+                        }
+                    }
+                    var StrLocalDevices = JSON.stringify(localDevices);
+                    var end = StrLocalDevices.length - 1;
+                    var finalLocalDevices = StrLocalDevices.substr(0, end) + ',{' + JSON.stringify(changeDevice).substring(1) + ']';
+                    localStorage.setItem("devices", finalLocalDevices);
+                    $('div#top-notice-ctnr span').html("device position changed");
+                    $('#top-notice-ctnr').fadeIn().delay(5000).fadeOut();
+                }
+            })
+        }
+        $(".new-asset a.cancel").click(function () {
+            closeLightbox()
+        })
+
+        function closeLightbox(){
+            $('#lightbox .dialog.new-coordinate input').val('');
+            $('#lightbox .dialog.new-asset input').val('');
+            $('#lightbox .dialog.new-asset textarea').text('');
+            $('#lightbox .dialog.new-coordinate input').val('');
+            $('#lightbox .dialog').each(function () {
+                $(this).hide()
+            })
+            $('#lightbox').fadeIn().hide()
+        }
+        function setNewDevice() {
+            $('#lightbox .dialog.new-asset').show();
+            $('#lightbox .dialog').not('.new-asset').each(function () {
+                $(this).hide()
+            });
+            $('#lightbox').fadeIn().show()
+        }
+        function openEventForm(assetPk) {
+            $('#lightbox .dialog.new-event').show();
+            $('#lightbox .dialog.new-event').find('#asset-id').val(assetPk);
+            $('#lightbox .dialog').not('.new-event').each(function () {
+                $(this).hide()
+            });
+            $('#lightbox').fadeIn().show()
+        }
+
+        function getSelectedCriteria(){
+            operator = '';
+            deviceCategory = '';
+            deviceStatus = '';
+            $('section label.checkbox').find('input:checkbox:checked').each(function() {
+                if ($(this).hasClass('operator')) operator += ($(this).val() + ',');
+                if ($(this).hasClass('devicecategory')) deviceCategory += ($(this).val() + ',');
+                if ($(this).hasClass('devicestatus')) deviceStatus += ($(this).val() + ',')
+
+            });
+            return {
+                deviceCategory: deviceCategory,
+                deviceStatus: deviceStatus
+            }
+        }
+
+        function getTechieInstallation(techieId) {
+            var endpoint = "{% url 'locator:get_techie_installation' %}";
+            var params = {format: 'json', techieId: techieId};
+            $('body, button').css('cursor','wait');
+            $.getJSON(endpoint, params, function(data) {
+                $('body, button').css('cursor','default');
+                if (data.error){
+                    $('div#top-notice-ctnr span').html(data.error).addClass('failure');
+                    $('#top-notice-ctnr').fadeIn().delay(5000);
+                } else {
+                    var devices = data.devices;
+                    for (var i=0; i<=devices.length-1; i++) {
+                        var latitude = parseFloat(devices[i].latitude),
+                            longitude = parseFloat(devices[i].longitude),
+                            deviceId = devices[i].id,
+                            zoom = devices[i].category.zoom;
+                        if (devices[i].image)    photo = devices[i].image;
+                        else  photo = "{% static 'pinsview/img/no_photo.png' %}";
+
+                        if (devices[i].category.icon) {
+                            iconImg =  "{{ media_root }}" + devices[i].category.icon
+                        }
+                        addMarkerToMap(latitude, longitude, deviceId, zoom, iconImg);
+                        $('div#navbar-results.item div.close').click()
+                    }
+                }
+            });
+            return false
+        }
+
+        function checkNewAsset() {
+            $.getJSON('{% url 'locator:check_new_device' %}',  {'lastDeviceId': lastDeviceId}, function(resp) {
+                if (resp.length > 0){
+                    var newDevices = [];
+                    for (var j=0; j<resp.length; j++) {
+                        var d = resp[j];
+                        addMarkerToMap(d.lat, d.lng, d.id, d.zoom, d.icon, map.getBounds());
+                        var newDevice = {'id': d.id, 'lat':d.lat, 'lng': d.lng, 'icon':d.icon, 'zoom': d.zoom};
+                        newDevices.push(newDevice)
+                    }
+                    lastDeviceId = resp[0].id;
+                    var localDevices = JSON.parse(localStorage.getItem("devices")),
+                        finalJSLocalDevices  = newDevices.concat(localDevices),
+                        StrLocalDevices = JSON.stringify(finalJSLocalDevices);
+                    localStorage.setItem("devices", StrLocalDevices);
+                }
+
+            });
+        }
+
+        function checkDataIntegrity() {
+            $.getJSON('{% url 'locator:check_data_integrity' %}',  {'lastFiberId': lastFiberId}, function(resp) {
+                if (resp.deleted_devices.length > 0){
+                    var localDevices = JSON.parse(localStorage.getItem("devices"));
+                    if (localDevices){
+                        var device_to_delete = resp.deleted_devices;
+                        for (var i = 0; i < device_to_delete.length; i++) {
+                            for (var j = 0; j < localDevices.length; j++) { //loop over the collection
+                                if (localDevices[j].id === device_to_delete[i]) { //see if ids match
+                                    localDevices.splice(j, 1); //remove item from array
+                                }
+                            }
+                        }
+                        localStorage.setItem("devices", JSON.stringify(localDevices));
+                    }
+
+                }
+
+            });
+        }
+
+        $('#equipment select.category').change(function (e) {
+            $('#equipment input.client_code').val('')
+            $('#equipment input.client_name').val('')
+            $('#equipment input.site_code').val('')
+            $('#equipment .client').fadeOut().hide()
+            if($(this).val() == 3){
+                $('#equipment .client').fadeIn().show()
+            }
+        })
+    })()
+
+</script>

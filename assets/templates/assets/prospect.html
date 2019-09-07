@@ -1,0 +1,55 @@
+{% extends "assets/base.html" %}
+{% load i18n humanize static %}
+{% block head_style %}
+    {{ block.super }}
+    <style>
+        label { width: 100%; }
+        #locator-status {background-color: #c10613; border: solid 1px #c10613; border-radius: 25px; float: right; height: 25px; width: 25px; }
+        #locator-status.active-locator {background-color: #05b01f; border: solid 1px #05b01f;}
+        .field-longitude , .field-latitude {display: none}
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row" style="margin-top: 70px">
+            <h2 style="text-align: center">{% trans 'Add new asset' %}</h2>
+            <form style="float: left;clear: both; padding: 0 15px;"  method="post" action="{% url 'locator:prospect' %}">{% csrf_token %}
+                <div id="locator-status" title="{% trans 'Location found' %}"></div>
+
+                {% include 'core/snippets/model_admin_form.html' %}
+
+                <div class="form-group"><button type="submit" class="btn btn-block btn-primary">{% trans "Submit" %}</button> </div>
+
+            </form>
+            <div style="clear: both; float: left; font-size: 25px">
+                {% for error in errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    {{ block.super }}
+    <script type="text/javascript">
+        (function() {
+            $('form').find('.form-row').addClass('form-group')
+            $('form').find('input, textarea, select').addClass('form-control')
+            function initCurrentLocationCoords() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showPosition);
+                }
+            }
+            function showPosition(position) {
+                var lat = position.coords.latitude;
+                var long =  position.coords.longitude;
+                $("#id_longitude").val(long)
+                $("#id_latitude").val(lat)
+                $("#locator-status").addClass('active-locator')
+            }
+            initCurrentLocationCoords()
+
+        })()
+    </script>
+{% endblock %}

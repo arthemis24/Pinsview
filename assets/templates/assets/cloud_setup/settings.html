@@ -1,0 +1,271 @@
+"""
+Django settings for Locator project.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/1.6/topics/settings/
+
+For the full list of settings and their values, see
+https://docs.djangoproject.com/en/1.6/ref/settings/
+"""
+
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = '{{ secret_key }}'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False
+
+TEMPLATE_DEBUG = True
+ALLOWED_HOSTS = [{{ allowed_hosts|safe }}]
+
+ADMINS = ( ('roddy', 'rmbogning@gmail.com'),)
+
+# Application definition
+
+INSTALLED_APPS = (
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.webdesign',
+    'django.contrib.humanize',
+    'django_user_agents',
+    'import_export',
+
+    'djangotoolbox',
+    'django_user_agents',
+    'ajaxuploader',
+
+    'ikwen.core',
+    'ikwen.accesscontrol',
+    'ikwen.billing',
+    'ikwen.flatpages',
+    'ikwen.cashout',
+    'ikwen.partnership',
+    'ikwen.theming',
+
+    'ikwen_pinsview.assets',
+)
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.media",
+    "django.core.context_processors.static",
+    "django.contrib.messages.context_processors.messages",
+    'django.core.context_processors.request',
+
+    "django.contrib.messages.context_processors.messages",
+    'django.core.context_processors.request',
+    'ikwen.core.context_processors.project_settings',
+    'ikwen.billing.context_processors.payment_means',
+)
+
+MIDDLEWARE_CLASSES = (
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
+
+)
+
+ROOT_URLCONF = 'conf.urls'
+
+WSGI_APPLICATION = 'conf.wsgi.application'
+
+# Database
+# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
+#
+
+if DEBUG:
+    WALLETS_DB = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': '/home/ikwen/Apps/ikwen/db.sqlite3',
+    }
+else:
+    WALLETS_DB = {  # ikwen_kakocase.ikwen_kakocase relational database used to store sensitive objects among which CashOutRequest
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ikwen_wallets',
+        'USER': 'ik_my_u',
+        'PASSWORD': ':S%R}^&d:Y-:'
+    }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django_mongodb_engine', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': '{{ ikwen_name }}',
+        'HOST': '46.101.107.75'
+    },
+    'umbrella': {
+        'ENGINE': 'django_mongodb_engine', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'ikwen_umbrella_prod',
+        'HOST': '46.101.107.75'
+    },
+    'wallets': WALLETS_DB
+}
+
+# Database
+# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 60 * 2,
+        'KEY_PREFIX': 'umbrella',
+        'VERSION': '1'
+    }
+}
+
+# Internationalization
+# https://docs.djangoproject.com/en/1.6/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'Africa/Douala'
+
+USE_I18N = True
+
+USE_L10N = True
+
+USE_TZ = False
+
+# Absolute filesystem path to the directory that will hold user-uploaded files.
+# Example: "/var/www/example.com/media/"
+MEDIA_ROOT = '{{ media_root }}'
+
+# URL that handles the media served from MEDIA_ROOT. Make sure to use a
+# trailing slash.
+# Examples: "http://example.com/media/", "http://media.example.com/"
+MEDIA_URL = '{{ media_url }}'
+
+# Absolute path to the directory static files should be collected to.
+# Don't put anything in this directory yourself; store your static files
+# in apps' "static/" subdirectories and in STATICFILES_DIRS.
+# Example: "/var/www/example.com/static/"
+STATIC_ROOT = '{{ static_root }}'
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.6/howto/static-files/
+
+STATIC_URL = '{{ static_url }}'
+
+TEMPLATE_DIRS = (
+    '/home/ikwen/Demos/Pinsview/templates',
+	os.path.join(BASE_DIR,  'templates')
+)
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 60 * 2,
+        'KEY_PREFIX': '{{ ikwen_name }}',  # Use rather svdprod for Production
+        'VERSION': '1'
+    }
+}
+
+#  *******       IKWEN CONFIGURATION       *******      #
+
+IKWEN_SERVICE_ID = '{{ service.id }}'
+
+PROJECT_NAME = '{{ service.project_name }}'
+
+PROJECT_URL = '{{ service.url }}'
+
+# Standard version uses ikwen payment accounts (PayPal, MobileMoney, BankCard, etc.)
+# and collects user's money upon purchases. He can later request a Cash out and his money
+# will be sent to him by any mean.
+# Pro version users can access more advanced configuration options like:
+#   * Personal Payment accounts (Personal PayPal, Personal Mobile Money, etc.)
+#   * Set the Checkout minimum without restriction
+#   * Technical tools like configuring their own Google Analytics scripts, etc.
+IS_PRO_VERSION = True
+
+IS_DEMO_VERSION = False
+
+# IS_OPERATOR = False
+# IS_CUSTOMER = True
+IS_PROVIDER = True
+
+VIEW_TIMEOUT = 3600
+
+IKWEN_CONFIG_MODEL = 'assets.OperatorProfile'
+IKWEN_CONFIG_MODEL_ADMIN = 'ikwen_pinsview.assets.admin.OperatorProfileAdmin'
+
+# Model to use to generate Invoice for.
+# Typically the Service which the Member subscribed to
+BILLING_SUBSCRIPTION_MODEL = 'core.Service'
+BILLING_SUBSCRIPTION_MODEL_ADMIN = 'ikwen.core.admin.ServiceAdmin'
+SERVICE_SUSPENSION_ACTION = 'ikwen.billing.utils.suspend_subscription'
+
+# Function that renders customer detail in the Admin Panel.
+# Must return the HTML code that will be inserted above the Block/Activate button
+# CUSTOMER_DETAIL_RENDERER = 'ikwen.foundation.accesscontrol.views.render_customer_detail'
+
+AUTH_USER_MODEL = 'accesscontrol.Member'
+
+AUTHENTICATION_BACKENDS = (
+    'permission_backend_nonrel.backends.NonrelPermissionBackend',
+    'ikwen.accesscontrol.backends.LocalDataStoreBackend',
+)
+
+MEMBER_AVATAR = 'ikwen/img/member-avatar.jpg'
+
+# BILLING SETTINGS
+BILLING_SUBSCRIPTION_MODEL = 'core.Service'
+BILLING_SUBSCRIPTION_MODEL_ADMIN = 'ikwen.core.admin.ServiceAdmin'
+BILLING_INVOICE_ITEM_MODEL = 'billing.IkwenInvoiceItem'
+SERVICE_SUSPENSION_ACTION = 'ikwen.billing.utils.suspend_subscription'
+
+
+PAYMENTS = {
+    'default': {
+        'before': 'ikwen.billing.collect.set_invoice_checkout',
+        'after': 'ikwen.billing.collect.confirm_invoice_payment'
+    },
+    'tsunami': {
+        'before': 'tsunami.views.set_checkout',
+        'after': 'tsunami.views.confirm_checkout'
+    }
+}
+MTN_MOMO_API_URL = 'https://developer.mtn.cm/OnlineMomoWeb/faces/transaction/transactionRequest.xhtml'
+ORANGE_MONEY_API_URL = 'https://api.orange.com/orange-money-webpay/cm/v1'
+OM_FEES_ON_MERCHANT = True
+
+
+#  *******       E-mail CONFIGURATION       *******  #
+
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_HOST_USER = 'ksihon'
+EMAIL_HOST_PASSWORD = 'B3@5tB0y'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+
+LOGOUT_REDIRECT_URL = 'ikwen:sign_in'
+
+LOGIN_URL = 'ikwen:sign_in'
+
+LOGIN_REDIRECT_URL = 'assets:network'
+HOME_URL = 'locator:network'
+ADMIN_URL = 'locator:network'
+
+#  *******       LOGGING       *******  #
+import logging
+from ikwen.core.log import LOGGING
+logging.config.dictConfig(LOGGING)

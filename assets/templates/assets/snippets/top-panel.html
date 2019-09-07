@@ -1,0 +1,85 @@
+{% load i18n staticfiles %}
+<div id="top-panel" class="hidden-xs">
+    <div id="search-box" class="subtle-shade">
+        <div class="menu-button">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </div>
+
+        <div id="navbar-search" class="navbar-form navbar-left pinsview">
+            <form id="search" autocomplete="off" onsubmit="return false">
+                <i class="glyphicon glyphicon-menu-left hide-search visible-xs"></i>
+                <i class="fa fa-search hidden-xs"></i>
+                <input id="keyword" type="text" name="radix" class="form-control input-sm" placeholder="{% trans "Search" %}">
+                <input type="hidden" name="q">
+                <span class="spinner" style="display: block"></span>
+            </form>
+            <div id="navbar-results" class="item" data-min-search-chars="2">
+                <div class="stage result" style="margin-left: -20px">
+{#                    {% include 'core/snippets/spinner.html' %}#}
+                    <div id="suggestions-for-view" style="display:none; margin-top: 20px">
+                        <div class="close" style="padding: 5px 12px; margin-left: 350px;"> X </div>
+                        <section class="techies">
+                             <header>Techies</header>
+                             <div class="result">
+                                 <ul class="techie">
+                                     <li class="ik-hdn choosen"><a href="#" data-type="techie" data-key="1"></a></li>
+                                     <li class="line tpl"><a href="#" data-techname="" data-type="techie" data-key="1"></a></li>
+                                 </ul>
+                             </div>
+                            <div class="more"></div>
+                        </section>
+                         <section class="fibers">
+                             <header>Fibers</header>
+                             <div class="more"></div>
+                             <div class="result">
+                                 <ul class="fiber">
+                                     <li class="ik-hdn choosen"><a href="#" data-type="fiber" data-key=""></a></li>
+                                     <li class="line tpl"><a href="#" data-type="techie" data-key="1"></a></li>
+                                 </ul>
+                            </div>
+                             <div class="more"></div>
+                         </section>
+                         <section class="devices">
+                             <header>Devices</header>
+                             <div class="divider"></div>
+                             <div class="result">
+                                 <ul class="device">
+                                     <li class="ik-hdn choosen"><a href="#" data-type="device" data-key=""></a></li>
+                                     <li class="line tpl"><a href="#" data-type="" data-key="1"></a></li>
+                                 </ul>
+                             </div>
+                             <div class="more"></div>
+                         </section>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        </div>
+    </div>
+    {% include 'assets/snippets/toolbox.html' %}
+
+</div>
+
+
+<nav role="navigation" class="nav" style="top: -4px;">
+    <ul class="nav-items">
+        <li class="nav-item dropdown">
+            <a href="#" class="nav-link" style="background: #000; height: 31px;margin: 0 4px; padding: 5px 14px;"></a>
+            <nav class="submenu">
+                <ul class="submenu-items">
+                    <li class="submenu-item" style="font-weight: 700; font-size: 12px; margin-left: 10px; overflow: hidden; width: 87%;">{{ request.user }}</li>
+                    <li class="submenu-item"><hr class="submenu-seperator" /></li>
+                    <li class="submenu-item"><a href="{% url 'admin:index' %}" class="submenu-link" target="_blank">Admin</a></li>
+{#                    {% if request.user.is_superuser %}#}
+{#                    <li class="submenu-item"><a href="{% url 'statistic' %}" class="submenu-link">Stats</a></li>#}
+{#                    {% endif %}#}
+{#                    <li class="submenu-item"><a href="{% url 'logout' %}" class="submenu-link">Logout</a></li>#}
+                </ul>
+            </nav>
+        </li>
+    </ul>
+</nav>

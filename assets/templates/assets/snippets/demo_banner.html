@@ -1,0 +1,9 @@
+ {% load i18n humanize staticfiles cache auth_tokens %}
+<div id="demo" class="" style="background: #fff; left: 0; bottom: 0; padding: 12px; position: absolute; z-index: 200000;">
+    <h3>{% trans 'PinsView demo' %}</h3>
+    <p>
+        {% blocktrans %}
+            Here is the demo version. Click <a href="#">HERE</a> to deploy yours
+        {% endblocktrans %}
+    </p>
+</div>

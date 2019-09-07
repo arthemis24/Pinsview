@@ -1,0 +1,80 @@
+{% load i18n staticfiles %}
+<div id="toolbox" class="hidden-xs">
+    <div>
+{#        <div class="coords subtle-shade hidden-sm">#}
+{#            <div class="lat coord">#}
+{#                <span>Lat:</span>#}
+{#                <span id="latspan">0.0000</span>#}
+{#            </div>#}
+{#            <div class="lng coord" style="float: left;margin-left: 12px">#}
+{#                <span>Lng:</span>#}
+{#                <span id="lngspan">0.0000</span>#}
+{#            </div>#}
+{#            <div id='add-coords' class="fa fa-plus" title="{% trans "Add new coordinates" %}"></div>#}
+{#        </div>#}
+{#         <div id='add-coords' class="fa fa-plus" title="{% trans "Add new coordinates" %}"></div>#}
+
+        <div class="action subtle-shade hidden-sm">
+            <span id='add-coords' class="fa fa-plus" title="{% trans "Add new coordinates" %}"></span>
+        </div>
+{#        <a class="hidden-sm">#}
+{#            <div class="action subtle-shade">#}
+{#                <span id='live-drawing' class="fa fa-magic" title="{% trans "Live drawing" %}"></span>#}
+{#            </div>#}
+{#        </a>#}
+
+        <div class="action subtle-shade hidden-sm">
+            <span id='erase' class="fa fa-eraser" title="{% trans "Clear the map" %}"></span>
+        </div>
+{#        <div class="action subtle-shade hidden-sm">#}
+{#            <span id='measure-line' class="fa fa-arrows-h" title="{% trans "Measure" %}"></span>#}
+{#        </div>#}
+        <div class="action subtle-shade hidden-sm ik-hdn">
+            <span id='view-all-equipments' class="fa fa-map-pin" title="{% trans "View all Equipment back" %}"></span>
+        </div>
+    </div>
+
+{#    <div id="live-drawing-tools-content" class="ik-hdn hidden-sm">#}
+{#        <div id="ld-filter" class="subtle-shade">#}
+{#            <div class="header">#}
+{#                <h5>{% trans "Live drawing" %}</h5>#}
+{#                <span class="glyphicon glyphicon-triangle-bottom"></span>#}
+{#            </div>#}
+{#            <section class="equipments" style="margin-top: 10px; ">#}
+{#                <div class="details">#}
+{#                    <ul>#}
+{#                        <li id="back-to-equipment">#}
+{#                             <a href="#" class="criterion">{% trans "View equipments" %}</a>#}
+{#                        </li>#}
+{#                    </ul>#}
+{#                </div>#}
+{#            </section>#}
+{#            <section id="line-search" class="hidden-xs" style="border-bottom: transparent; padding-bottom: 5px">#}
+{#                <form role="form" id="line-search" style="clear: both; margin-left: 15px; margin-top: 5px">#}
+{#                    <div class="form-group">#}
+{#                         <label for="type" style="cursor: default; font-size: 12px">{% trans "Find a line" %}</label>#}
+{#                         <input type="text" id="line-keyword" style="border-radius: 4px;font-size: 12px; height: 30px; width: 170px;" placeholder="{% trans "Search a line" %}">#}
+{#                         <input type="hidden">#}
+{#                         <div id="suggestions-for-lines" style=""></div>#}
+{#                    </div>#}
+{#                    <div class="form-group ik-hdn">#}
+{#                        <label for="type">Real Coords</label>#}
+{#                        <textarea id="latlngBrutes" readonly="readonly"></textarea>#}
+{#                    </div>#}
+{#                    <div class="form-group ik-hdn">#}
+{#                        <label for="type hidden">Encoded coords</label>#}
+{#                        <textarea id="latlngEncodees" readonly="readonly"></textarea>#}
+{#                    </div>#}
+{#                    <div class="form-group" style="clear: both">#}
+{#                         <button class="btn validate btn-success btn-sm" style="font-weight: 700; font-size: 12px; width: 169px;">{% trans "Submit" %}</button>#}
+{#                    </div>#}
+{#                </form>#}
+{#            </section>#}
+{#        </div>#}
+{#        <div class="ld-toolbox" style="position: fixed; right:75px ; top:9px; z-index: 50">#}
+{#            <div class="action subtle-shade" style="padding: 0">#}
+{#                <button id='done' class="btn validate btn-success btn-sm" style="font-weight: 700; font-size: 12px;width: 90px;" title="Confirm">{% trans "Done" %}</button>#}
+{#             </div>#}
+{#        </div>#}
+{#    </div>#}
+</div>

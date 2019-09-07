@@ -1,0 +1,54 @@
+{% load i18n humanize staticfiles cache %}
+<div id='' class="tooltip-html-text asset tpl">
+     <div class="spinner"></div>
+    <h4></h4>
+    <div class="client">
+        <div class="code" style="text-align: center"></div>
+        <div class="client-name"></div>
+    </div>
+    <div class="stage">
+        <div class="slider">
+            <div class="photo"></div>
+        </div>
+    </div>
+    <div class="desc">
+        <p>A much detailed description goes here ...</p>
+    </div>
+    <div style="clear: both;">
+        <div>
+            <span class="admin"><a href="{{ admin_url }}" target="_blank">View in admin</a></span>
+{#                    <span class="reload" style="float: right;"><a href="#" deviceid=""><img width="20" src="{% static 'img/refresh-grey-512.png' %}" title="reload this fiber"></a></span>#}
+        </div>
+        <span class="open-right-panel"  style="float: right"><a title="{% trans "View history" %}"><i class="fa fa-list" style="font-size: 22px; position: absolute"></i></a></span>
+         <span class="view-img"><a href="#">View image</a></span>
+        <span class="created cleared"><b> Created on: </b> <span class="resp"></span></span>
+        <span class="techie cleared" style="margin-top: 5px"><b> Techie: </b><span class="resp"></span></span>
+    </div>
+</div>
+<div class="fiber-tooltip-html-text asset tpl">
+    <h4></h4>
+    <div class="description" style="float: left; width: 250px">
+        <span class=""></span>
+    </div>
+    <div style="clear: both; float: left">
+        <span class="admin" style="margin-left: 0"><a href="{{ admin_url }}" target="_blank">View in admin</a></span>
+    </div>
+    <div class="edit-lnk" style="float: right;margin-top: -10px">
+        <span class="admin" style=""><a href="#" target="_blank" fiberid="">Edit this fiber</a></span>
+        <span class="reload" style=""><a href="#" fiberid=""><img width="20" src="{% static 'img/refresh-grey-512.png' %}" title="reload this fiber"></a></span>
+    </div>
+    <div class="created-on" style="clear: both">
+        <b>Plot on:</b>
+        <span class=""></span>
+    </div>
+    <div class="techie">
+        <b>Techie:</b>
+        <span class=""></span>
+    </div>
+    <div class="distance">
+        <b style=""></b>
+        <span class=""></span>
+        <em style="">Meters</em>
+    </div>
+    <span class="open-right-panel"><a title="{% trans "View history" %}"><i class="fa fa-list" style="float: right; margin-right: 0; margin-top: -22px; font-size: 22px"></i></a></span>
+</div>

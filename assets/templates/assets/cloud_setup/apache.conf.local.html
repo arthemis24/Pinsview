@@ -1,0 +1,12 @@
+<Directory /home/roddy/PycharmProjects/CloudTest/PinsView/{{ ikwen_name }}/conf>
+	<Files wsgi.py>
+		Order deny,allow
+		Require all granted
+	</Files>
+</Directory>
+
+WSGIScriptAlias /{{ ikwen_name }} /home/roddy/PycharmProjects/CloudTest/PinsView/{{ ikwen_name }}/conf/wsgi.py
+WSGIDaemonProcess {{ ikwen_name }} python-path=/home/roddy/PycharmProjects/CloudTest/PinsView/{{ ikwen_name }}:/home/roddy/PycharmProjects/venv/lib/python2.7/site-packages/
+<Location /{{ ikwen_name }}>
+	WSGIProcessGroup {{ ikwen_name }}
+</Location>
